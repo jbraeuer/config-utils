@@ -101,6 +101,7 @@ def handle_items
         commit = store.commit "n4env"
         @log.info "Commit done: #{commit.id}"
     end
+    store.finish_transaction
 end
 
 def store_init
