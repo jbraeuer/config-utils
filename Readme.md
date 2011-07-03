@@ -19,17 +19,17 @@ Config-utils require git_store and grit. Both can be found on github.
 
 ## Usage ##
 
-Initialize the store.
+### Initialize the store.
 
     ./kv --store /path/to/repo --init
 
-Set a value
+### Set a value
 
     ./kv --store /path/to/repo --set mykey=myvalue
 
-Get a value
+### Get a value
 
-  Print <key>=<value>
+  Print key=value
 
     ./kv --store /path/to/repo --get mykey
 
@@ -37,11 +37,11 @@ Get a value
 
     value=$(./kv --store /path/to/repo --get mykey --raw)
 
-Add value to list
+### Add value to list
 
     ./kv --store /path/to/repo --append mykey=anothervalue
 
-Delete keys/value
+### Delete keys/value
 
   Delete key with all its values
 
@@ -51,7 +51,7 @@ Delete keys/value
 
     ./kv --store /path/to/repo --del mykey=element
 
-List operations
+### List operations
 
     ./kv --store /path/to/repo --listkeys
     ./kv --store /path/to/repo --list
