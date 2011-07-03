@@ -151,23 +151,16 @@ def parse_options
         k,v = f.split("=")
         @options[:items] << Item.new(:del, k,  v)
     end
-    opt.on("--set KEY=VALUE", "Set to value") do |f|
-        @options[:mode] = :set
-        k,v = f.split("=")
-        @options[:items] << Item.new(:set, k,  v)
+    [:set, :append].each do |action|
+        opt.on("--#{action} KEY=VALUE", "#{action} to value") do |f|
+            k,v = f.split("=")
+            @options[:items] << Item.new(:action, k,  v)
+        end
     end
-    opt.on("--append KEY=VALUE", "Append to value") do |f|
-        @options[:mode] = :append
-        k,v = f.split("=")
-        @options[:items] << Item.new(:append, k,  v)
-    end
-    opt.on("--listkeys [KEY]", "Append to value") do |k|
-        @options[:mode] = :listkeys
-        @options[:items] << Item.new(:listkeys, k)
-    end
-    opt.on("--list [KEY]", "Append to value") do |k|
-        @options[:mode] = :list
-        @options[:items] << Item.new(:list, k)
+    [:listkeys, :list].each do |action|
+        opt.on("--#{action} [KEY]", "#{action}") do |k|
+            @options[:items] << Item.new(action, k)
+        end
     end
 
     opt.on("--separator SEP", "Separator value to use") do |s|
