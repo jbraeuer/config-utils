@@ -34,7 +34,9 @@ def handle_item_get_and_print(store, key)
 end
 
 def handle_items_set(store, key, value)
-    store[key] = [value].to_json
+    old_value = store[key]
+    new_value = [value].to_json
+    store[key] = new_value if new_value != old_value
 end
 
 def handle_items_del(store, key, value=nil)
@@ -95,10 +97,7 @@ def handle_items
         end
     end
 
-    # @log.debug("store is #{store.to_yaml}")
-
-    changes = @options[:items].reject {|item| [:get, :listkeys, :list].include?(item.mode) }
-    unless changes.empty?
+    if store.root.modified?
         commit = store.commit "n4env"
         @log.info "Commit done: #{commit.id}"
     end
