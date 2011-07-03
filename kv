@@ -1,0 +1,197 @@
+#! /usr/bin/env ruby
+
+require 'rubygems'
+require 'optparse'
+require 'logger'
+require "git_store"
+require 'pp'
+require 'json'
+require 'grit'
+require 'fileutils'
+
+class Item
+    attr_accessor :mode, :key, :value
+    def initialize(mode, key, value=nil)
+        @mode, @key, @value = mode, key, value
+    end
+end
+
+def handle_items_get(store, key)
+    raw = store[key]
+    return [] if raw.nil? or raw.empty?
+    JSON.parse(raw)
+end
+
+def handle_item_get_and_print(store, key)
+    value = handle_items_get(store, key)
+    start = "#{key}="
+    start = "" if @options[:raw]
+    if value.nil? or value.empty?
+        puts "#{start}"
+    else
+        puts "#{start}#{value.join(@options[:separator])}"
+    end
+end
+
+def handle_items_set(store, key, value)
+    store[key] = [value].to_json
+end
+
+def handle_items_del(store, key, value=nil)
+    if value.nil? or value.empty?
+        store.delete(key)
+    else
+        values = handle_items_get(store, key)
+        values = values.reject {|element| element == value}
+        store[key] = values.to_json
+    end
+end
+
+def handle_items_append(store, key, value)
+    values = handle_items_get(store, key)
+    if values.nil?
+        handle_items_set(store, key, value)
+    else
+        values << value
+        store[key] = values.to_json
+    end
+end
+
+def handle_items_listkeys(store, key)
+    paths = store.paths
+    unless key.nil? or key.empty?
+        paths = paths.find_all {|p| p.index(key) == 0 }
+    end
+    paths
+end
+
+
+def handle_items
+    store = GitStore.new @options[:storepath]
+    store.start_transaction
+
+    @options[:items].each do |item|
+        case item.mode
+        when :get
+            handle_item_get_and_print(store, item.key)
+        when :set
+            handle_items_set(store, item.key, item.value)
+        when :append
+            handle_items_append(store, item.key, item.value)
+        when :del
+            handle_items_del(store, item.key, item.value)
+        when :listkeys
+            keys = handle_items_listkeys(store, item.key)
+            puts keys
+        when :list
+            handle_items_listkeys(store, item.key).each do |key|
+                handle_item_get_and_print(store, key)
+            end
+        end
+
+        if [:get, :set, :del, :append].include?(item.mode)
+            @log.debug "#{item.mode}: #{item.key}=#{item.value}"
+            @log.debug "store: #{store[item.key]}"
+        end
+    end
+
+    # @log.debug("store is #{store.to_yaml}")
+
+    changes = @options[:items].reject {|item| [:get, :listkeys, :list].include?(item.mode) }
+    unless changes.empty?
+        commit = store.commit "n4env"
+        @log.info "Commit done: #{commit.id}"
+    end
+end
+
+def store_init
+    @log.info "Create directory #{@options[:storepath]}" unless File.directory? @options[:storepath]
+    FileUtils.mkdir_p @options[:storepath]
+
+    begin
+        Grit::Repo.new(@options[:storepath])
+    rescue Grit::InvalidGitRepositoryError => e
+        @log.info "Create new git repo in #{@options[:storepath]}"
+        Grit::Repo.init(@options[:storepath])
+    end
+end
+
+def parse_options
+    @options = {
+        :storepath => nil,
+        :storeinit => false,
+        :items => [],
+        :separator => ",",
+        :raw => false,
+    }
+
+    opt = OptionParser.new
+    opt.on("--store PATH", "Repo to use") do |f|
+        @options[:storepath] = f
+    end
+
+    opt.on("--get KEY", "Key to query") do |f|
+        @options[:items] << Item.new(:get, f)
+    end
+    opt.on("--del KEY[=VALUE]", "Key to query") do |f|
+        k,v = f.split("=")
+        @options[:items] << Item.new(:del, k,  v)
+    end
+    opt.on("--set KEY=VALUE", "Set to value") do |f|
+        @options[:mode] = :set
+        k,v = f.split("=")
+        @options[:items] << Item.new(:set, k,  v)
+    end
+    opt.on("--append KEY=VALUE", "Append to value") do |f|
+        @options[:mode] = :append
+        k,v = f.split("=")
+        @options[:items] << Item.new(:append, k,  v)
+    end
+    opt.on("--listkeys [KEY]", "Append to value") do |k|
+        @options[:mode] = :listkeys
+        @options[:items] << Item.new(:listkeys, k)
+    end
+    opt.on("--list [KEY]", "Append to value") do |k|
+        @options[:mode] = :list
+        @options[:items] << Item.new(:list, k)
+    end
+
+    opt.on("--separator SEP", "Separator value to use") do |s|
+        @options[:separator] = s
+    end
+    opt.on("--raw", "Output value only") do
+        @options[:raw] = true
+    end
+    opt.on("--init", "Initialize store") do
+        @options[:storeinit] = true
+    end
+
+    opt.on("--verbose", 'Verbose mode') do
+        @log.level = Logger::INFO if Logger::INFO < @log.level
+        # @log.info "Info mode enabled."
+    end
+    opt.on("--debug", 'Debug mode') do
+        @log.level = Logger::DEBUG if Logger::DEBUG < @log.level
+        # @log.debug "Debug mode enabled."
+    end
+
+    opt.parse!
+
+    [:storepath, :items].each do |key|
+        if @options[key].nil? or @options[key].empty?
+            puts "Please give #{key}."
+            exit(3)
+        end
+    end
+end
+
+def logger_init
+    @log = Logger.new(STDERR)
+    @log.level = Logger::WARN
+    @log.formatter = proc { |severity, datetime, progname, msg| "#{severity}: #{msg}\n" }
+end
+
+logger_init
+parse_options
+store_init if @options[:storeinit]
+handle_items
