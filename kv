@@ -16,10 +16,22 @@ class Item
     end
 end
 
-def handle_items_get(store, key)
-    raw = store[key]
+def serialize(value)
+    if value.is_a? Array
+        value.to_json + "\n"
+    else
+        serialize([value])
+    end
+end
+
+def unserialize(raw)
     return [] if raw.nil? or raw.empty?
+    puts raw
     JSON.parse(raw)
+end
+
+def handle_items_get(store, key)
+    unserialize(store[key])
 end
 
 def handle_item_get_and_print(store, key)
@@ -34,9 +46,7 @@ def handle_item_get_and_print(store, key)
 end
 
 def handle_items_set(store, key, value)
-    old_value = store[key]
-    new_value = [value].to_json + "\n"
-    store[key] = new_value if new_value != old_value
+    store[key] = serialize(value)
 end
 
 def handle_items_del(store, key, value=nil)
@@ -45,7 +55,7 @@ def handle_items_del(store, key, value=nil)
     else
         values = handle_items_get(store, key)
         values = values.reject {|element| element == value}
-        store[key] = values.to_json + "\n"
+        store[key] = serialize(values)
     end
 end
 
@@ -55,7 +65,7 @@ def handle_items_append(store, key, value)
         handle_items_set(store, key, value)
     else
         values << value
-        store[key] = values.to_json + "\n"
+        store[key] = serialize(values)
     end
 end
 
@@ -66,7 +76,6 @@ def handle_items_listkeys(store, key)
     end
     paths
 end
-
 
 def handle_items
     store = GitStore.new @options[:storepath]
