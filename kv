@@ -54,7 +54,13 @@ def handle_items_del(store, key, value=nil)
         store.delete(key)
     else
         values = handle_items_get(store, key)
-        values = values.reject {|element| element == value}
+        matcher = value.match("^/\(.*\)/$")
+        if matcher
+            regexp = Regexp.new(matcher[1])
+            values = values.reject {|element| regexp.match(element) }
+        else
+            values = values.reject {|element| element == value}
+        end
         store[key] = serialize(values)
     end
 end
