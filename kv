@@ -35,7 +35,7 @@ end
 
 def handle_items_set(store, key, value)
     old_value = store[key]
-    new_value = [value].to_json
+    new_value = [value].to_json + "\n"
     store[key] = new_value if new_value != old_value
 end
 
@@ -45,7 +45,7 @@ def handle_items_del(store, key, value=nil)
     else
         values = handle_items_get(store, key)
         values = values.reject {|element| element == value}
-        store[key] = values.to_json
+        store[key] = values.to_json + "\n"
     end
 end
 
@@ -55,7 +55,7 @@ def handle_items_append(store, key, value)
         handle_items_set(store, key, value)
     else
         values << value
-        store[key] = values.to_json
+        store[key] = values.to_json + "\n"
     end
 end
 
