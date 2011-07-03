@@ -178,7 +178,7 @@ def parse_options
     opt.parse!
 
     [:storepath, :items].each do |key|
-        if @options[key].nil? or @options[key].empty?
+        if ( @options[key].nil? or @options[key].empty? ) and not @options[:storeinit]
             puts "Please give #{key}."
             exit(3)
         end
