@@ -1,0 +1,41 @@
+#! /bin/bash
+
+log () {
+    echo "$@"
+}
+
+usage() {
+    log "$0 - a program to create a rpm"
+    log "Options:"
+    log " -d - do package the rpm"
+}
+
+if [ "$1" != "-d" ]; then
+    usage
+    exit 1
+fi
+
+set -e
+
+BASEDIR=$(basedir $(readlink -f "$0"))
+cd "${BASEDIR}"
+
+# run test
+rake test
+
+# create the gem
+gem build config-utils.gemspec
+
+# build spec file
+readonly BUILDROOT=$(mktemp -d)
+mkdir -p ${BUILDROOT}/{RPMS,SPEC,SOURCES,BUILD}
+for file in *.gem; do
+    gem2rpm "${file}" >"${BUILDROOT}/SPEC/${file}.spec"
+    cp "${file}" "${BUILDROOT}/SOURCES/"
+    rpmbuild \
+	--define "_topdir ${BUILDROOT}" \
+	-bb "${BUILDROOT}/SPEC/${file}.spec"
+done
+
+log "Find your RPM here: ${BUILDROOT}/RPMS"
+find "${BUILDROOT}/RPMS" -type f -name '*.rpm'

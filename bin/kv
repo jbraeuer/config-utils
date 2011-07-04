@@ -1,0 +1,106 @@
+#! /usr/bin/env ruby
+
+require 'rubygems'
+require 'optparse'
+require 'logger'
+require 'git_store'
+require 'pp'
+require 'json'
+require 'grit'
+require 'fileutils'
+require 'config-utils'
+
+def handle_items
+    store = GitStore.new @options[:storepath]
+    kvstore = KVStore.new store, @options[:items], @options, @log
+    kvstore.run
+end
+
+def store_init
+    @log.info "Create directory #{@options[:storepath]}" unless File.directory? @options[:storepath]
+    FileUtils.mkdir_p @options[:storepath]
+
+    begin
+        Grit::Repo.new(@options[:storepath])
+    rescue Grit::InvalidGitRepositoryError => e
+        @log.info "Create new git repo in #{@options[:storepath]}"
+        Grit::Repo.init(@options[:storepath])
+    end
+end
+
+def parse_options
+    @options = {
+        :storepath => nil,
+        :storeinit => false,
+        :items => [],
+        :separator => ",",
+        :raw => false,
+        :commitmsg => "kv",
+    }
+
+    opt = OptionParser.new("A tool to get/set/del key-value-pairs in a git-backed store.")
+    opt.on("--store PATH", "Repo to use") do |f|
+        @options[:storepath] = f
+    end
+
+    opt.on("--get KEY", "Query key") do |f|
+        @options[:items] << Item.new(:get, f)
+    end
+    opt.on("--del KEY[=VALUE]", "Key/Value to delete. (Regexp for value supported)") do |f|
+        k,v = f.split("=")
+        @options[:items] << Item.new(:del, k,  v)
+    end
+    [:set, :append].each do |action|
+        opt.on("--#{action} KEY=VALUE", "#{action.to_s.capitalize} value to/for key") do |f|
+            k,v = f.split("=")
+            @options[:items] << Item.new(action, k,  v)
+        end
+    end
+    [:listkeys, :list].each do |action|
+        opt.on("--#{action} [KEY]", "#{action.to_s.capitalize}") do |k|
+            @options[:items] << Item.new(action, k)
+        end
+    end
+
+    opt.on("-m MSG", "--message MSG", "Commit message to use") do |m|
+        @options[:commitmsg] = m
+    end
+    opt.on("--separator SEP", "Separator to use (default: '#{@options[:separator]}')") do |s|
+        @options[:separator] = s
+    end
+    opt.on("--raw", "Output value only (default: '#{@options[:raw]}')") do
+        @options[:raw] = true
+    end
+    opt.on("--init", "Initialize store") do
+        @options[:storeinit] = true
+    end
+
+    opt.on("--verbose", 'Verbose mode') do
+        @log.level = Logger::INFO if Logger::INFO < @log.level
+        # @log.info "Info mode enabled."
+    end
+    opt.on("--debug", 'Debug mode') do
+        @log.level = Logger::DEBUG if Logger::DEBUG < @log.level
+        # @log.debug "Debug mode enabled."
+    end
+
+    opt.parse!
+
+    [:storepath, :items].each do |key|
+        if ( @options[key].nil? or @options[key].empty? ) and not @options[:storeinit]
+            puts "Please give #{key}."
+            exit(3)
+        end
+    end
+end
+
+def logger_init
+    @log = Logger.new(STDERR)
+    @log.level = Logger::WARN
+    @log.formatter = proc { |severity, datetime, progname, msg| "#{severity}: #{msg}\n" }
+end
+
+logger_init
+parse_options
+store_init if @options[:storeinit]
+handle_items
