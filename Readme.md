@@ -73,3 +73,8 @@ Config-utils require git_store and grit. Both can be found on github.
   Git commit message to use
 
     ./kv --message
+
+## Known Bugs
+
+* git_store can only read loose-objects (not packed ones)
+* the working-copy is not updated
