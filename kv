@@ -42,19 +42,19 @@ class KVStore
             @log.debug "handle item #{item.mode},#{item.key},#{item.value}"
             case item.mode
             when :get
-                handle_item_get_and_print(item.key)
+                get_and_print(item.key)
             when :set
-                handle_items_set(item.key, item.value)
+                set(item.key, item.value)
             when :append
-                handle_items_append(item.key, item.value)
+                append(item.key, item.value)
             when :del
-                handle_items_del(item.key, item.value)
+                del(item.key, item.value)
             when :listkeys
-                keys = handle_items_listkeys(item.key)
+                keys = listkeys(item.key)
                 puts keys
             when :list
-                handle_items_listkeys(item.key).each do |key|
-                    handle_item_get_and_print(key)
+                listkeys(item.key).each do |key|
+                    get_and_print(key)
                 end
             end
 
@@ -72,12 +72,12 @@ class KVStore
     end
 
     private
-    def handle_items_get(key)
+    def get(key)
         KVStore.unserialize(@store[key])
     end
 
-    def handle_item_get_and_print(key)
-        value = handle_items_get(key)
+    def get_and_print(key)
+        value = get(key)
         start = "#{key}="
         start = "" if @options[:raw]
         if value.nil? or value.empty?
@@ -87,15 +87,15 @@ class KVStore
         end
     end
 
-    def handle_items_set(key, value)
+    def set(key, value)
         @store[key] = KVStore.serialize(value)
     end
 
-    def handle_items_del(key, value=nil)
+    def del(key, value=nil)
         if value.nil? or value.empty?
             @store.delete(key)
         else
-            values = handle_items_get(key)
+            values = get(key)
             matcher = value.match("^/\(.*\)/$")
             if matcher
                 regexp = Regexp.new(matcher[1])
@@ -107,17 +107,17 @@ class KVStore
         end
     end
 
-    def handle_items_append(key, value)
-        values = handle_items_get(key)
+    def append(key, value)
+        values = get(key)
         if values.nil?
-            handle_items_set(key, value)
+            set(key, value)
         else
             values << value
             @store[key] = KVStore.serialize(values)
         end
     end
 
-    def handle_items_listkeys(key)
+    def listkeys(key)
         paths = @store.paths
         unless key.nil? or key.empty?
             paths = paths.find_all {|p| p.index(key) == 0 }
