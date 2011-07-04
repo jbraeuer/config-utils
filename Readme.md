@@ -47,11 +47,29 @@ Config-utils require git_store and grit. Both can be found on github.
 
     ./kv --store /path/to/repo --del mykey
 
-  Delete elements
+  Delete elements by exact match
 
     ./kv --store /path/to/repo --del mykey=element
+
+  Delete all elements matching regexp
+
+    ./kv --store /path/to/repo --del mykey=/myregexp/
 
 ### List operations
 
     ./kv --store /path/to/repo --listkeys
     ./kv --store /path/to/repo --list
+
+### General options
+
+  Separator to use for lists
+
+    ./kv --separator
+
+  Output raw-format (value only)
+
+    ./kv --raw
+
+  Git commit message to use
+
+    ./kv --message
