@@ -65,7 +65,7 @@ class KVStore
         end
 
         if @store.root.modified?
-            commit = @store.commit "n4env"
+            commit = @store.commit @options[:commitmsg]
             @log.info "Commit done: #{commit.id}"
         end
         @store.finish_transaction
@@ -151,6 +151,7 @@ def parse_options
         :items => [],
         :separator => ",",
         :raw => false,
+        :commitmsg => "kv",
     }
 
     opt = OptionParser.new("A tool to get/set/del key-value-pairs in a git-backed store.")
@@ -177,6 +178,9 @@ def parse_options
         end
     end
 
+    opt.on("-m MSG", "--message MSG", "Commit message to use") do |m|
+        @options[:commitmsg] = m
+    end
     opt.on("--separator SEP", "Separator to use (default: '#{@options[:separator]}')") do |s|
         @options[:separator] = s
     end
