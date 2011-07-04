@@ -16,106 +16,120 @@ class Item
     end
 end
 
-def serialize(value)
-    if value.is_a? Array
-        value.to_json + "\n"
-    else
-        serialize([value])
-    end
-end
-
-def unserialize(raw)
-    return [] if raw.nil? or raw.empty?
-    JSON.parse(raw)
-end
-
-def handle_items_get(store, key)
-    unserialize(store[key])
-end
-
-def handle_item_get_and_print(store, key)
-    value = handle_items_get(store, key)
-    start = "#{key}="
-    start = "" if @options[:raw]
-    if value.nil? or value.empty?
-        puts "#{start}"
-    else
-        puts "#{start}#{value.join(@options[:separator])}"
-    end
-end
-
-def handle_items_set(store, key, value)
-    store[key] = serialize(value)
-end
-
-def handle_items_del(store, key, value=nil)
-    if value.nil? or value.empty?
-        store.delete(key)
-    else
-        values = handle_items_get(store, key)
-        matcher = value.match("^/\(.*\)/$")
-        if matcher
-            regexp = Regexp.new(matcher[1])
-            values = values.reject {|element| regexp.match(element) }
+class KVStore
+    # static methods
+    def self.serialize(value)
+        if value.is_a? Array
+            value.to_json + "\n"
         else
-            values = values.reject {|element| element == value}
+            serialize([value])
         end
-        store[key] = serialize(values)
     end
-end
 
-def handle_items_append(store, key, value)
-    values = handle_items_get(store, key)
-    if values.nil?
-        handle_items_set(store, key, value)
-    else
-        values << value
-        store[key] = serialize(values)
+    def self.unserialize(raw)
+        return [] if raw.nil? or raw.empty?
+        JSON.parse(raw)
     end
-end
 
-def handle_items_listkeys(store, key)
-    paths = store.paths
-    unless key.nil? or key.empty?
-        paths = paths.find_all {|p| p.index(key) == 0 }
+    def initialize(store, items, options, log)
+        @store, @items, @options, @log = store, items, options, log
     end
-    paths
+
+    def run
+        @store.start_transaction
+
+        @items.each do |item|
+            @log.debug "handle item #{item.mode},#{item.key},#{item.value}"
+            case item.mode
+            when :get
+                handle_item_get_and_print(item.key)
+            when :set
+                handle_items_set(item.key, item.value)
+            when :append
+                handle_items_append(item.key, item.value)
+            when :del
+                handle_items_del(item.key, item.value)
+            when :listkeys
+                keys = handle_items_listkeys(item.key)
+                puts keys
+            when :list
+                handle_items_listkeys(item.key).each do |key|
+                    handle_item_get_and_print(key)
+                end
+            end
+
+            if [:get, :set, :del, :append].include?(item.mode)
+                @log.debug "#{item.mode}: #{item.key}=#{item.value}"
+                @log.debug "store: #{@store[item.key]}"
+            end
+        end
+
+        if @store.root.modified?
+            commit = @store.commit "n4env"
+            @log.info "Commit done: #{commit.id}"
+        end
+        @store.finish_transaction
+    end
+
+    private
+    def handle_items_get(key)
+        KVStore.unserialize(@store[key])
+    end
+
+    def handle_item_get_and_print(key)
+        value = handle_items_get(key)
+        start = "#{key}="
+        start = "" if @options[:raw]
+        if value.nil? or value.empty?
+            puts "#{start}"
+        else
+            puts "#{start}#{value.join(@options[:separator])}"
+        end
+    end
+
+    def handle_items_set(key, value)
+        @store[key] = KVStore.serialize(value)
+    end
+
+    def handle_items_del(key, value=nil)
+        if value.nil? or value.empty?
+            @store.delete(key)
+        else
+            values = handle_items_get(key)
+            matcher = value.match("^/\(.*\)/$")
+            if matcher
+                regexp = Regexp.new(matcher[1])
+                values = values.reject {|element| regexp.match(element) }
+            else
+                values = values.reject {|element| element == value}
+            end
+            @store[key] = KVStore.serialize(values)
+        end
+    end
+
+    def handle_items_append(key, value)
+        values = handle_items_get(key)
+        if values.nil?
+            handle_items_set(key, value)
+        else
+            values << value
+            @store[key] = KVStore.serialize(values)
+        end
+    end
+
+    def handle_items_listkeys(key)
+        paths = @store.paths
+        unless key.nil? or key.empty?
+            paths = paths.find_all {|p| p.index(key) == 0 }
+        end
+        paths
+    end
 end
 
 def handle_items
     store = GitStore.new @options[:storepath]
-    store.start_transaction
-
-    @options[:items].each do |item|
-        case item.mode
-        when :get
-            handle_item_get_and_print(store, item.key)
-        when :set
-            handle_items_set(store, item.key, item.value)
-        when :append
-            handle_items_append(store, item.key, item.value)
-        when :del
-            handle_items_del(store, item.key, item.value)
-        when :listkeys
-            keys = handle_items_listkeys(store, item.key)
-            puts keys
-        when :list
-            handle_items_listkeys(store, item.key).each do |key|
-                handle_item_get_and_print(store, key)
-            end
-        end
-
-        if [:get, :set, :del, :append].include?(item.mode)
-            @log.debug "#{item.mode}: #{item.key}=#{item.value}"
-            @log.debug "store: #{store[item.key]}"
-        end
-    end
-
-    if store.root.modified?
-        commit = store.commit "n4env"
-        @log.info "Commit done: #{commit.id}"
-    end
-    store.finish_transaction
+    kvstore = KVStore.new store, @options[:items], @options, @log
+    kvstore.run
 end
 
 def store_init
@@ -154,7 +168,7 @@ def parse_options
     [:set, :append].each do |action|
         opt.on("--#{action} KEY=VALUE", "#{action.to_s.capitalize} value to/for key") do |f|
             k,v = f.split("=")
-            @options[:items] << Item.new(:action, k,  v)
+            @options[:items] << Item.new(action, k,  v)
         end
     end
     [:listkeys, :list].each do |action|
