@@ -2,13 +2,6 @@ require 'git_store'
 require 'pp'
 require 'json'
 
-class Item
-    attr_accessor :mode, :key, :value
-    def initialize(mode, key, value=nil)
-        @mode, @key, @value = mode, key, value
-    end
-end
-
 class KVStore
     # static methods
     def self.serialize(value)
