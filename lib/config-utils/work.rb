@@ -7,6 +7,8 @@ class WorkItem
     end
 
     def to_s
-        return "<#{super.to_s}:#{@docpath}:#{@op}:#{@args.join(":")}>"
+        args = ""
+        args = @args.join(":") unless @args.nil?
+        return "<#{super.to_s}:#{@docpath}:#{@op}:#{args}>"
     end
 end
