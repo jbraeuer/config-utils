@@ -48,7 +48,7 @@ class Command
     end
 
     def to_s
-        return "<#{super.to_s}:#{@document}:#{@key}:#{@value}>"
+        return "<#{super.to_s}:#{@document.path}:#{@key}:#{@value}>"
     end
 
     def set(value)
