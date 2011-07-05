@@ -79,7 +79,7 @@ def parse_options
         @options[:storeinit] = true
     end
 
-    opt.on("--doc DOCUMENT", "Document to work with.") do |d|
+    opt.on("--document DOCUMENT", "Document to work with.") do |d|
         @options[:document] = d
     end
 
