@@ -91,9 +91,9 @@ end
 
 class DelCommand < Command
     def run
-        if @value.nil?
+        if @value.nil? or ! @document.has_key?(@key)
             set(@value)
-            return CommandResult.build(self, @document, nil, nil)
+            return CommandResult.build(self, @document, @key, nil)
         end
 
         values = @document[@key]
