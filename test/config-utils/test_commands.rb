@@ -63,7 +63,7 @@ class TestCommand < MiniTest::Unit::TestCase
         r = c.run
 
         check_result r
-        check_keyvalue r, nil, nil
+        check_keyvalue r, "key", nil
         assert(! d.has_key?("key"))
     end
 
@@ -74,7 +74,7 @@ class TestCommand < MiniTest::Unit::TestCase
         r = c.run
 
         check_result r
-        check_keyvalue r, nil, nil
+        check_keyvalue r, "key", nil
         assert(! d.has_key?("key"))
     end
 
@@ -96,7 +96,7 @@ class TestCommand < MiniTest::Unit::TestCase
         r = c.run
 
         check_result r
-        check_keyvalue r, nil, nil
+        check_keyvalue r, "key", nil
     end
 
     def test_del_keyvalue_regexp_part

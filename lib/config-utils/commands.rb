@@ -108,11 +108,7 @@ class DelCommand < Command
         end
 
         set(values)
-        if @document.has_key? @key
-            return CommandResult.build(self, @document, @key, @document[@key])
-        else
-            return CommandResult.build(self, @document, nil, nil)
-        end
+        return CommandResult.build(self, @document, @key, @document[@key])
     end
 end
 
