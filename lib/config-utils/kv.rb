@@ -23,24 +23,22 @@ class KVStore
 
     def run
         @store.start_transaction
-
         @items.each do |item|
             @log.debug "handle item #{item.mode},#{item.key},#{item.value}"
             case item.mode
             when :get
-                get_and_print(item.key)
+                result << get(item)
             when :set
-                set(item.key, item.value)
+                result << set(item)
             when :append
-                append(item.key, item.value)
+                result << append(item, item.value)
             when :del
-                del(item.key, item.value)
+                result << del(item, item.value)
             when :listkeys
                 keys = listkeys(item.key)
-                puts keys
             when :list
                 listkeys(item.key).each do |key|
-                    get_and_print(key)
+                    render(item.key, get(key))
                 end
             end
 
@@ -55,52 +53,39 @@ class KVStore
             @log.info "Commit done: #{commit.id}"
         end
         @store.finish_transaction
+        result
     end
 
     private
-    def get(key)
-        KVStore.unserialize(@store[key])
+    def get(item)
+        item.value = KVStore.unserialize(@store[item.key])
+        item
     end
 
-    def get_and_print(key)
-        value = get(key)
-        start = "#{key}="
-        start = "" if @options[:raw]
-        if value.nil? or value.empty?
-            puts "#{start}"
-        else
-            puts "#{start}#{value.join(@options[:separator])}"
-        end
-    end
-
-    def set(key, value)
-        @store[key] = KVStore.serialize(value)
-    end
-
-    def del(key, value=nil)
-        if value.nil? or value.empty?
+    def set(item)
+        if item.value.nil? or item.value.empty?
             @store.delete(key)
         else
-            values = get(key)
-            matcher = value.match("^/\(.*\)/$")
-            if matcher
-                regexp = Regexp.new(matcher[1])
-                values = values.reject {|element| regexp.match(element) }
-            else
-                values = values.reject {|element| element == value}
-            end
-            @store[key] = KVStore.serialize(values)
+            @store[item.key] = KVStore.serialize(item.value)
         end
     end
 
-    def append(key, value)
-        values = get(key)
-        if values.nil?
-            set(key, value)
+    def del(item, value)
+        values = get(item)
+        matcher = value.match("^/\(.*\)/$")
+        if matcher
+            regexp = Regexp.new(matcher[1])
+            values = values.reject {|element| regexp.match(element) }
         else
-            values << value
-            @store[key] = KVStore.serialize(values)
+            values = values.reject {|element| element == value}
         end
+        item.value = values
+        set(item)
+    end
+
+    def append(item, value)
+        get(item).value << value
+        set(item)
     end
 
     def listkeys(key)
