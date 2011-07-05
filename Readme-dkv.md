@@ -6,7 +6,6 @@
 
 - add --rendersource <doc> --render <tmpl>
 
-
 ## Example repo
 
 /world
