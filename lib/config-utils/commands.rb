@@ -41,7 +41,7 @@ class CommandResult < Hash
     end
 end
 
-class Command
+class DocumentCommand
     def initialize(document, key, value=nil)
         raise "Command cant operate without document." if document.nil?
         @document, @key, @value = document, key, value
@@ -68,21 +68,21 @@ class Command
     end
 end
 
-class GetCommand < Command
+class GetCommand < DocumentCommand
     def run
         value = @document[@key]
         CommandResult.build(self, @document, @key, value)
     end
 end
 
-class SetCommand < Command
+class SetCommand < DocumentCommand
     def run
         @document[@key] = @value
         CommandResult.build(self, @document, @key, @value)
     end
 end
 
-class AppendCommand < Command
+class AppendCommand < DocumentCommand
     def run
         if @document[@key].is_a? Array
             @document[@key] << @value
@@ -93,7 +93,7 @@ class AppendCommand < Command
     end
 end
 
-class DelCommand < Command
+class DelCommand < DocumentCommand
     def run
         if @value.nil? or ! @document.has_key?(@key)
             set(@value)
