@@ -118,3 +118,39 @@ class TestCommand < MiniTest::Unit::TestCase
         check_keyvalue r, "key", ["foo", "bar"]
     end
 end
+
+class TestCommandWorkItem < MiniTest::Unit::TestCase
+    def test_unknown_raises
+        store = { "path/" => {} }
+        w = WorkItem.new("/path/", :foo)
+        assert_raises(RuntimeError) { CommandFactory.fromWorkItem(store, w) }
+    end
+
+    def test_get
+        store = { "path/" => {} }
+        w = WorkItem.new("path/", :get)
+        c = CommandFactory.fromWorkItem(store, w)
+        assert(c.is_a?(GetCommand))
+    end
+
+    def test_set
+        store = { "path/" => {} }
+        w = WorkItem.new("path/", :set, "hallo", "welt")
+        c = CommandFactory.fromWorkItem(store, w)
+        assert(c.is_a?(SetCommand))
+    end
+
+    def test_append
+        store = { "path/" => {} }
+        w = WorkItem.new("path/", :append, "hallo", "welt")
+        c = CommandFactory.fromWorkItem(store, w)
+        assert(c.is_a?(AppendCommand))
+    end
+
+    def test_del
+        store = { "path/" => {} }
+        w = WorkItem.new("path/", :del, "hallo", "welt")
+        c = CommandFactory.fromWorkItem(store, w)
+        assert(c.is_a?(DelCommand))
+    end
+end

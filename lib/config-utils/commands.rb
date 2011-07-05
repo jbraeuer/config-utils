@@ -1,20 +1,49 @@
+class CommandFactory
+    def self.fromWorkItem(store, item)
+        document = (store[item.docpath] or {})
+        case item.op
+        when :get
+            GetCommand.new(document, item.args[0])
+        when :set
+            SetCommand.new(document, item.args[0], item.args[1])
+        when :append
+            AppendCommand.new(document, item.args[0], item.args[1])
+        when :del
+            DelCommand.new(document, item.args[0], item.args[1])
+        else
+            raise "Unsupported workitem operation: #{item.op}"
+        end
+    end
+end
+
+class CommandResult < Hash
+    def render(options)
+        prefix = ""
+        prefix = "#{self[:key]}=" unless options[:raw]
+        values = self[:value]
+        values = [values] unless values.is_a? Array
+        puts "#{prefix}#{values.join(options[:separator])}"
+    end
+end
+
 class Command
     def initialize(document, key, value=nil)
+        raise "Command cant operate without document." if document.nil?
         @document, @key, @value = document, key, value
     end
 
-    def run
-        raise RuntimeError, "Implement me"
+    def to_s
+        return "<#{super.to_s}:#{@document}:#{@key}:#{@value}>"
     end
 
     private
     def build_result(command, document, key, value)
-        {
+        CommandResult.new.merge( {
             :command => command,
             :document => document,
             :key => key,
             :value => value
-        }
+        })
     end
 
     def set(value)

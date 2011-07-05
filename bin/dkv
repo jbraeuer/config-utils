@@ -1,0 +1,115 @@
+#! /usr/bin/env ruby
+
+require 'rubygems'
+require 'optparse'
+require 'logger'
+require 'pp'
+require 'json'
+require 'grit'
+require 'fileutils'
+require 'config-utils'
+
+def handle_workitem(item)
+    @log.debug("Handle item: #{item}")
+end
+
+def handle_workq(options)
+    store = DKVStore.new options[:storepath]
+    store.start_transaction
+
+    @log.debug("Items in workq: #{options[:workq].length}")
+    cmds = options[:workq].map do |item|
+        @log.debug("Handle workItem: #{item}")
+        CommandFactory.fromWorkItem(store, item)
+    end
+
+    @log.debug("Will run commands.")
+    results = cmds.map do |cmd|
+        @log.debug("Run command: #{cmd}")
+        cmd.run
+    end
+
+    @log.debug("Will print results.")
+    results.map do |result|
+        result.render @options
+    end
+
+    if store.root.modified?
+        commit = store.commit options[:commitmsg]
+        @log.info "Commit done: #{commit.id}"
+    end
+    store.finish_transaction
+end
+
+def store_init(options)
+    @log.info "Create directory #{options[:storepath]}" unless File.directory? options[:storepath]
+    FileUtils.mkdir_p options[:storepath]
+
+    begin
+        Grit::Repo.new(options[:storepath])
+    rescue Grit::InvalidGitRepositoryError => e
+        @log.info "Create new git repo in #{options[:storepath]}"
+        Grit::Repo.init(options[:storepath])
+    end
+end
+
+def parse_options
+    @options = {
+        :storepath => nil,
+        :storeinit => false,
+        :document => "default",
+        :workq => [],
+        :commitmsg => "kv",
+        :separator => ",",
+        :raw => false,
+    }
+
+    opt = OptionParser.new("A tool to get/set/del key-value-pairs in a git-backed store.")
+    opt.on("--store PATH", "Repo to use") do |f|
+        @options[:storepath] = f
+    end
+    opt.on("--init", "Initialize store") do
+        @options[:storeinit] = true
+    end
+
+    opt.on("--doc DOCUMENT", "Document to work with.") do |d|
+        @options[:document] = d
+    end
+
+    opt.on("--get KEY", "Query key") do |k|
+        @options[:workq] << WorkItem.new(@options[:document], :get, k)
+    end
+    opt.on("--set KEY=VALUE", "Query key") do |o|
+        k,v = o.split("=")
+        @options[:workq] << WorkItem.new(@options[:document], :set, k, v)
+    end
+
+    opt.on("--verbose", 'Verbose mode') do
+        @log.level = Logger::INFO if Logger::INFO < @log.level
+        # @log.info "Info mode enabled."
+    end
+    opt.on("--debug", 'Debug mode') do
+        @log.level = Logger::DEBUG if Logger::DEBUG < @log.level
+        # @log.debug "Debug mode enabled."
+    end
+
+    opt.parse!
+
+    [:storepath, :workq].each do |i|
+        if ( @options[i].nil? or @options[i].empty? ) and not @options[:storeinit]
+            puts "Please give #{i}."
+            exit(3)
+        end
+    end
+end
+
+def logger_init
+    @log = Logger.new(STDERR)
+    @log.level = Logger::WARN
+    @log.formatter = proc { |severity, datetime, progname, msg| "#{severity}: #{msg}\n" }
+end
+
+logger_init
+parse_options
+store_init(@options) if @options[:storeinit]
+handle_workq(@options)
