@@ -6,22 +6,27 @@ class JSONHandler
         JSON.load(path)
     end
 
-    def write(path, data)
+    def write(data)
         data.to_json
     end
 end
 
-class DKVStore < GitStore
-    def initialize(path, branch='master', bare=false)
-        super(path, branch, bare)
-        @handler['json'] = JSONHandler.new
+class DKVStore
+    def initialize(path)
+        @store = GitStore.new(path)
+        @store.handler['json'] = JSONHandler.new
     end
 
     def [](path)
-        super(path + ".json")
+        @store[path + ".json"]
     end
 
     def []=(path, data)
-        super(path + ".json", data)
+        @store[path + ".json"] = data
     end
+
+    def method_missing(m, *args, &block)
+        @store.send(m, *args, &block)
+    end
+
 end
