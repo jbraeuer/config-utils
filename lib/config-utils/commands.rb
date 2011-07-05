@@ -18,6 +18,16 @@ class CommandFactory
 end
 
 class CommandResult < Hash
+
+    def self.build(command, document, key, value)
+        CommandResult.new.merge( {
+                                     :command => command,
+                                     :document => document,
+                                     :key => key,
+                                     :value => value
+                                 } )
+    end
+
     def render(options)
         prefix = ""
         prefix = "#{self[:key]}=" unless options[:raw]
@@ -35,16 +45,6 @@ class Command
 
     def to_s
         return "<#{super.to_s}:#{@document}:#{@key}:#{@value}>"
-    end
-
-    private
-    def build_result(command, document, key, value)
-        CommandResult.new.merge( {
-                                     :command => command,
-                                     :document => document,
-                                     :key => key,
-                                     :value => value
-                                 } )
     end
 
     def set(value)
@@ -67,14 +67,14 @@ end
 class GetCommand < Command
     def run
         value = @document[@key]
-        build_result(self, @document, @key, value)
+        CommandResult.build(self, @document, @key, value)
     end
 end
 
 class SetCommand < Command
     def run
         @document[@key] = @value
-        build_result(self, @document, @key, @value)
+        CommandResult.build(self, @document, @key, @value)
     end
 end
 
@@ -85,7 +85,7 @@ class AppendCommand < Command
         else
             @document[@key] = [@document[@key], @value]
         end
-        build_result(self, @document, @key, @document[@key])
+        CommandResult.build(self, @document, @key, @document[@key])
     end
 end
 
@@ -93,7 +93,7 @@ class DelCommand < Command
     def run
         if @value.nil?
             set(@value)
-            return build_result(self, @document, nil, nil)
+            return CommandResult.build(self, @document, nil, nil)
         end
 
         values = @document[@key]
@@ -109,9 +109,9 @@ class DelCommand < Command
 
         set(values)
         if @document.has_key? @key
-            return build_result(self, @document, @key, @document[@key])
+            return CommandResult.build(self, @document, @key, @document[@key])
         else
-            return build_result(self, @document, nil, nil)
+            return CommandResult.build(self, @document, nil, nil)
         end
     end
 end
