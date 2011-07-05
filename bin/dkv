@@ -86,9 +86,17 @@ def parse_options
     opt.on("--get KEY", "Query key") do |k|
         @options[:workq] << WorkItem.new(@options[:document], :get, k)
     end
-    opt.on("--set KEY=VALUE", "Query key") do |o|
+    opt.on("--set KEY=VALUE", "Set key to value") do |o|
         k,v = o.split("=")
         @options[:workq] << WorkItem.new(@options[:document], :set, k, v)
+    end
+    opt.on("--append KEY=VALUE", "Append value to key") do |o|
+        k,v = o.split("=")
+        @options[:workq] << WorkItem.new(@options[:document], :append, k, v)
+    end
+    opt.on("--del KEY[=VALUE]", "Delete value from key. Value has regexp support.") do |o|
+        k,v = o.split("=")
+        @options[:workq] << WorkItem.new(@options[:document], :del, k, v)
     end
 
     opt.on("--verbose", 'Verbose mode') do
