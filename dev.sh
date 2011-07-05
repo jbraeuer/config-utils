@@ -5,6 +5,6 @@
 #
 
 base="$(readlink -f $(dirname $0))"
-RUBYLIB="${base}/lib" "$@"
+RUBYLIB="${base}/lib:${base}/../git_store/lib" "$@"
 
 
