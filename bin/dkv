@@ -17,24 +17,31 @@ def handle_workq(options)
     store = DKVStore.new options[:storepath]
     store.start_transaction
 
-    $log.debug("Items in workq: #{options[:workq].length}")
+    $log.debug "Items in workq: #{options[:workq].length}"
     cmds = options[:workq].map do |item|
-        $log.debug("Handle workItem: #{item}")
-        CommandFactory.fromWorkItem(store, item)
+        $log.debug "Handle workItem: #{item}"
+        CommandFactory.fromWorkItem store, item
     end
 
-    $log.debug("Will run commands.")
+    $log.debug "Will run commands."
     results = cmds.map do |cmd|
-        $log.debug("Run command: #{cmd}")
+        $log.debug "Run command: #{cmd}"
         cmd.run
     end
 
-    $log.debug("Will print results.")
+    $log.debug "Will print results."
     results.each do |result|
         result.render @options
     end
 
+    $log.debug "Will update store with results."
+    results.each do |result|
+        doc = result[:document]
+        store[doc.path] = doc
+    end
+
     if store.root.modified?
+        $log.debug "Will persist results."
         commit = store.commit options[:commitmsg]
         $log.info "Commit done: #{commit.id}"
     end
