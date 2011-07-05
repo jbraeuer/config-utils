@@ -1,5 +1,6 @@
 class Document < Hash
     attr_reader :path
+
     def initialize(path, values=nil)
         @path = path
         unless values.nil?

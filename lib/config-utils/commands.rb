@@ -1,6 +1,7 @@
 class CommandFactory
     def self.fromWorkItem(store, item)
-        document = (store[item.docpath] or {})
+        content = (store[item.docpath] or {})
+        document = Document.new(item.docpath, content)
         case item.op
         when :get
             GetCommand.new(document, item.args[0])
@@ -39,11 +40,11 @@ class Command
     private
     def build_result(command, document, key, value)
         CommandResult.new.merge( {
-            :command => command,
-            :document => document,
-            :key => key,
-            :value => value
-        })
+                                     :command => command,
+                                     :document => document,
+                                     :key => key,
+                                     :value => value
+                                 } )
     end
 
     def set(value)

@@ -3,6 +3,7 @@ class TestCommand < MiniTest::Unit::TestCase
         [:command, :document, :key, :value].each do |k|
             assert(r.has_key?(k))
         end
+        assert r[:document].respond_to? :path
     end
 
     def check_keyvalue(r, k, v)
@@ -11,7 +12,7 @@ class TestCommand < MiniTest::Unit::TestCase
     end
 
     def test_set
-        d = { }
+        d = Document.new("my/path", { })
         k = "key"
         v = "value"
 
@@ -25,7 +26,7 @@ class TestCommand < MiniTest::Unit::TestCase
     def test_get
         k = "key"
         v = "value"
-        d = { k => v }
+        d = Document.new("my/path", { k => v })
 
         c = GetCommand.new(d, k)
         r = c.run
@@ -35,7 +36,7 @@ class TestCommand < MiniTest::Unit::TestCase
     end
 
     def test_append_stringarray
-        d = { "key" => "value1" }
+        d = Document.new("my/path", { "key" => "value1" })
 
         c = AppendCommand.new(d, "key", "value2")
         r = c.run
@@ -45,7 +46,7 @@ class TestCommand < MiniTest::Unit::TestCase
     end
 
     def test_del_key
-        d = { "key" => "value1" }
+        d = Document.new("my/path", { "key" => "value1" })
 
         c = DelCommand.new(d, "key", nil)
         r = c.run
@@ -56,7 +57,7 @@ class TestCommand < MiniTest::Unit::TestCase
     end
 
     def test_del_keyvalue_ok
-        d = { "key" => "value1" }
+        d = Document.new("my/path", { "key" => "value1" })
 
         c = DelCommand.new(d, "key", "value1")
         r = c.run
@@ -67,7 +68,7 @@ class TestCommand < MiniTest::Unit::TestCase
     end
 
     def test_del_keyvalue_oklist
-        d = { "key" => ["value", "value", "value"] }
+        d = Document.new("my/path", { "key" => ["value", "value", "value"] })
 
         c = DelCommand.new(d, "key", "value")
         r = c.run
@@ -79,7 +80,7 @@ class TestCommand < MiniTest::Unit::TestCase
 
 
     def test_del_keyvalue_fail
-        d = { "key" => "value1" }
+        d = Document.new("my/path", { "key" => "value1" })
 
         c = DelCommand.new(d, "key", "bla")
         r = c.run
@@ -89,7 +90,7 @@ class TestCommand < MiniTest::Unit::TestCase
     end
 
     def test_del_keyvalue_regexp_all
-        d = { "key" => ["value1", "value2"] }
+        d = Document.new("my/path", { "key" => ["value1", "value2"] })
 
         c = DelCommand.new(d, "key", "/alue/")
         r = c.run
@@ -99,7 +100,7 @@ class TestCommand < MiniTest::Unit::TestCase
     end
 
     def test_del_keyvalue_regexp_part
-        d = { "key" => ["value1", "foobar", "value2"] }
+        d = Document.new("my/path", { "key" => ["value1", "foobar", "value2"] })
 
         c = DelCommand.new(d, "key", "/alue/")
         r = c.run
@@ -109,7 +110,7 @@ class TestCommand < MiniTest::Unit::TestCase
     end
 
     def test_del_keyvalue_regexp_partlist
-        d = { "key" => ["value1", "foo", "bar", "value2"] }
+        d = Document.new("my/path", { "key" => ["value1", "foo", "bar", "value2"] })
 
         c = DelCommand.new(d, "key", "/alue/")
         r = c.run
