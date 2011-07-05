@@ -68,6 +68,7 @@ def parse_options
         :workq => [],
         :commitmsg => "kv",
         :separator => ",",
+        :listdocs => false,
         :raw => false,
     }
 
@@ -84,19 +85,23 @@ def parse_options
     end
 
     opt.on("--get KEY", "Query key") do |k|
-        @options[:workq] << WorkItem.new(@options[:document], :get, k)
+        @options[:workq] << WorkItem.new(:get, @options[:document], k)
     end
     opt.on("--set KEY=VALUE", "Set key to value") do |o|
         k,v = o.split("=")
-        @options[:workq] << WorkItem.new(@options[:document], :set, k, v)
+        @options[:workq] << WorkItem.new(:set, @options[:document], k, v)
     end
     opt.on("--append KEY=VALUE", "Append value to key") do |o|
         k,v = o.split("=")
-        @options[:workq] << WorkItem.new(@options[:document], :append, k, v)
+        @options[:workq] << WorkItem.new(:append, @options[:document], k, v)
     end
     opt.on("--del KEY[=VALUE]", "Delete value from key. Value has regexp support.") do |o|
         k,v = o.split("=")
-        @options[:workq] << WorkItem.new(@options[:document], :del, k, v)
+        @options[:workq] << WorkItem.new(:del, @options[:document], k, v)
+    end
+
+    opt.on("--listdocs", "List documents.") do
+        @options[:workq] << WorkItem.new(:listdocs)
     end
 
     opt.on("--verbose", 'Verbose mode') do

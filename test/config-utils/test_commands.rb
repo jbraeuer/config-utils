@@ -52,7 +52,7 @@ class TestCommand < MiniTest::Unit::TestCase
         r = c.run
 
         check_result r
-        check_keyvalue r, nil, nil
+        check_keyvalue r, "key", nil
         assert(! d.has_key?("key"))
     end
 
@@ -123,34 +123,34 @@ end
 class TestCommandWorkItem < MiniTest::Unit::TestCase
     def test_unknown_raises
         store = { "path/" => {} }
-        w = WorkItem.new("/path/", :foo)
+        w = WorkItem.new(:foo, "/path/")
         assert_raises(RuntimeError) { CommandFactory.fromWorkItem(store, w) }
     end
 
     def test_get
         store = { "path/" => {} }
-        w = WorkItem.new("path/", :get)
+        w = WorkItem.new(:get, "path/")
         c = CommandFactory.fromWorkItem(store, w)
         assert(c.is_a?(GetCommand))
     end
 
     def test_set
         store = { "path/" => {} }
-        w = WorkItem.new("path/", :set, "hallo", "welt")
+        w = WorkItem.new(:set, "path/", :"hallo", "welt")
         c = CommandFactory.fromWorkItem(store, w)
         assert(c.is_a?(SetCommand))
     end
 
     def test_append
         store = { "path/" => {} }
-        w = WorkItem.new("path/", :append, "hallo", "welt")
+        w = WorkItem.new(:append, "path/", "hallo", "welt")
         c = CommandFactory.fromWorkItem(store, w)
         assert(c.is_a?(AppendCommand))
     end
 
     def test_del
         store = { "path/" => {} }
-        w = WorkItem.new("path/", :del, "hallo", "welt")
+        w = WorkItem.new(:del, "path/", "hallo", "welt")
         c = CommandFactory.fromWorkItem(store, w)
         assert(c.is_a?(DelCommand))
     end

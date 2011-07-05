@@ -1,10 +1,9 @@
 class WorkItem
     attr_accessor :docpath, :op, :args
 
-    def initialize(docpath, op, *args)
-        raise "docpath must not be empty" if docpath.nil? or docpath.empty?
+    def initialize(op, *args)
         raise "op must be symbol" unless op.is_a? Symbol
-        @docpath, @op, @args = docpath, op, args
+        @op, @docpath, @args = op, args[0], args[1, args.length]
     end
 
     def to_s
