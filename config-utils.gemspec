@@ -17,6 +17,6 @@ Gem::Specification.new do |s|
 
   # dependencies
   s.add_runtime_dependency 'json'
-  s.add_runtime_dependency 'gitstore'
+  s.add_runtime_dependency 'git_store'
   s.add_runtime_dependency 'grit'
 end
