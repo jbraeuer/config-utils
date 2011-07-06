@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'config-utils'
-  s.version = "0.1.0"
+  s.version = "0.1.1"
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Jens Braeuer"]
   s.summary = "Configuration utils"
@@ -17,5 +17,6 @@ Gem::Specification.new do |s|
 
   # dependencies
   s.add_runtime_dependency 'json'
+  s.add_runtime_dependency 'gitstore'
+  s.add_runtime_dependency 'grit'
 end
-
