@@ -29,16 +29,17 @@ def handle_workq(options)
         cmd.run
     end
 
-    $log.debug "Will print results."
+    $log.debug "Will print results (#{results.length})"
     results.each do |result|
-        result.render @options
+        puts result.render(@options).join("\n")
     end
 
-    $log.debug "Will update store with results."
+    results = results.select { |r| r.is_a? DocumentCommandResult }
+    $log.debug "Will update store with results (#{results.length})."
     results.each do |result|
-        next unless result.is_a? DocumentCommand
         doc = result[:document]
-        store[doc.path] = doc
+        store[doc.path] = (store[doc.path] or {}).merge(doc)
+        $log.debug "Persisted #{doc.path}"
     end
 
     if store.root.modified?
@@ -113,6 +114,12 @@ def parse_options
 
     opt.on("--listdocs", "List documents.") do
         @options[:workq] << WorkItem.new(:listdocs)
+    end
+    opt.on("--listkeys", "List keys in document.") do
+        @options[:workq] << WorkItem.new(:listkeys, @options[:document])
+    end
+    opt.on("--listkeyvalues", "List keys in document.") do
+        @options[:workq] << WorkItem.new(:listkeyvalues, @options[:document])
     end
 
     opt.on("--verbose", 'Verbose mode') do

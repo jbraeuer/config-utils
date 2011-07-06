@@ -1,6 +1,6 @@
 class CommandFactory
     def self.fromWorkItem(store, item)
-        if [:get, :set, :append, :del].include? item.op
+        if [:get, :set, :append, :del, :listkeys, :listkeyvalues].include? item.op
             CommandFactory.toDocumentCommand store, item
         elsif [:listdocs].include? item.op
             CommandFactory.toStoreCommand store, item
@@ -29,7 +29,32 @@ class CommandFactory
             AppendCommand.new(document, item.args[0], item.args[1])
         when :del
             DelCommand.new(document, item.args[0], item.args[1])
+        when :listkeys
+            ListkeysCommand.new(document, item.args[0])
+        when :listkeyvalues
+            ListkeyvaluesCommand.new(document, item.args[0])
         end
+    end
+end
+
+class StoreCommandResult < Array
+    def render(options)
+        self.sort
+    end
+end
+
+class StoreCommand
+    def initialize(op, store)
+        raise "Op must by symbol." unless op.is_a? Symbol
+        raise "Command can't operate without store." if store.nil?
+        @op, @store = op, store
+    end
+end
+
+class ListdocsStoreCommand < StoreCommand
+    def run
+        docs = @store.paths.map { |p| p.gsub(".json", "") }
+        StoreCommandResult.new.concat docs
     end
 end
 
@@ -48,29 +73,7 @@ class DocumentCommandResult < Hash
         prefix = "#{self[:key]}=" unless options[:raw]
         values = self[:value]
         values = [values] unless values.is_a? Array
-        puts "#{prefix}#{values.join(options[:separator])}"
-    end
-end
-
-class StoreCommandResult < Array
-    def render(options)
-        self.sort!
-        puts self.join("\n")
-    end
-end
-
-class StoreCommand
-    def initialize(op, store)
-        raise "Op must by symbol." unless op.is_a? Symbol
-        raise "Command can't operate without store." if store.nil?
-        @op, @store = op, store
-    end
-end
-
-class ListdocsStoreCommand < StoreCommand
-    def run
-        docs = @store.paths.map { |p| p.gsub(".json", "") }
-        StoreCommandResult.new.concat docs
+        [ "#{prefix}#{values.join(options[:separator])}" ]
     end
 end
 
@@ -149,6 +152,33 @@ class DelCommand < DocumentCommand
     end
 end
 
+class ListCommandResult
+    def initialize(document, options={})
+        @document, @options = document, options
+    end
+
+    def render(options)
+        @document.map do |k,v|
+            if @options[:showvalues]
+                "#{v}=#{k}"
+            else
+                "#{k}"
+            end
+        end
+    end
+end
+
+class ListkeysCommand < DocumentCommand
+    def run
+        ListCommandResult.new @document
+    end
+end
+
+class ListkeyvaluesCommand < DocumentCommand
+    def run
+        ListCommandResult.new @document, :showvalues => true
+    end
+end
 
 
 
