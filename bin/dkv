@@ -80,7 +80,7 @@ def parse_options
         @options[:storeinit] = true
     end
 
-    opt.on("-m MSG", "--message MSG", "Commit message to use") do |m|
+    opt.on("--message MSG", "Commit message to use") do |m|
         @options[:commitmsg] = m
     end
     opt.on("--separator SEP", "Separator to use (default: '#{@options[:separator]}')") do |s|
