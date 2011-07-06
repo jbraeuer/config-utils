@@ -1,15 +1,22 @@
 class CommandFactory
     def self.fromWorkItem(store, item)
         if [:get, :set, :append, :del].include? item.op
-            CommandFactory.toDocumentCommand(store, item)
+            CommandFactory.toDocumentCommand store, item
         elsif [:listdocs].include? item.op
-            raise "NYI: #{item.op}"
+            CommandFactory.toStoreCommand store, item
         else
             raise "Unsupported workitem operation: #{item.op}"
         end
     end
 
     private
+    def self.toStoreCommand(store, item)
+        case item.op
+        when :listdocs
+            ListdocsStoreCommand.new item.op, store
+        end
+    end
+
     def self.toDocumentCommand(store, item)
         content = (store[item.docpath] or {})
         document = Document.new(item.docpath, content)
@@ -26,10 +33,9 @@ class CommandFactory
     end
 end
 
-class CommandResult < Hash
-
+class DocumentCommandResult < Hash
     def self.build(command, document, key, value)
-        CommandResult.new.merge( {
+        DocumentCommandResult.new.merge( {
                                      :command => command,
                                      :document => document,
                                      :key => key,
@@ -43,6 +49,28 @@ class CommandResult < Hash
         values = self[:value]
         values = [values] unless values.is_a? Array
         puts "#{prefix}#{values.join(options[:separator])}"
+    end
+end
+
+class StoreCommandResult < Array
+    def render(options)
+        self.sort!
+        puts self.join("\n")
+    end
+end
+
+class StoreCommand
+    def initialize(op, store)
+        raise "Op must by symbol." unless op.is_a? Symbol
+        raise "Command can't operate without store." if store.nil?
+        @op, @store = op, store
+    end
+end
+
+class ListdocsStoreCommand < StoreCommand
+    def run
+        docs = @store.paths.map { |p| p.gsub(".json", "") }
+        StoreCommandResult.new.concat docs
     end
 end
 
@@ -76,14 +104,14 @@ end
 class GetCommand < DocumentCommand
     def run
         value = @document[@key]
-        CommandResult.build(self, @document, @key, value)
+        DocumentCommandResult.build(self, @document, @key, value)
     end
 end
 
 class SetCommand < DocumentCommand
     def run
         @document[@key] = @value
-        CommandResult.build(self, @document, @key, @value)
+        DocumentCommandResult.build(self, @document, @key, @value)
     end
 end
 
@@ -94,7 +122,7 @@ class AppendCommand < DocumentCommand
         else
             @document[@key] = [@document[@key], @value]
         end
-        CommandResult.build(self, @document, @key, @document[@key])
+        DocumentCommandResult.build(self, @document, @key, @document[@key])
     end
 end
 
@@ -102,7 +130,7 @@ class DelCommand < DocumentCommand
     def run
         if @value.nil? or ! @document.has_key?(@key)
             set(@value)
-            return CommandResult.build(self, @document, @key, nil)
+            return DocumentCommandResult.build(self, @document, @key, nil)
         end
 
         values = @document[@key]
@@ -117,7 +145,7 @@ class DelCommand < DocumentCommand
         end
 
         set(values)
-        return CommandResult.build(self, @document, @key, @document[@key])
+        return DocumentCommandResult.build(self, @document, @key, @document[@key])
     end
 end
 

@@ -36,6 +36,7 @@ def handle_workq(options)
 
     $log.debug "Will update store with results."
     results.each do |result|
+        next unless result.is_a? DocumentCommand
         doc = result[:document]
         store[doc.path] = doc
     end
