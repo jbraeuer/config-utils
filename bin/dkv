@@ -118,7 +118,7 @@ def parse_options
     opt.on("--listkeys", "List keys in document.") do
         @options[:workq] << WorkItem.new(:listkeys, @options[:document])
     end
-    opt.on("--listkeyvalues", "List keys in document.") do
+    opt.on("--listkeyvalues", "List keys and values in document.") do
         @options[:workq] << WorkItem.new(:listkeyvalues, @options[:document])
     end
 
@@ -135,6 +135,7 @@ def parse_options
 
     [:storepath, :workq].each do |i|
         if ( @options[i].nil? or @options[i].empty? ) and not @options[:storeinit]
+            puts opt
             puts "Please give #{i}."
             exit(3)
         end
