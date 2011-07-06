@@ -1,22 +1,27 @@
 class CommandFactory
     def self.fromWorkItem(store, item)
         if [:get, :set, :append, :del].include? item.op
-            content = (store[item.docpath] or {})
-            document = Document.new(item.docpath, content)
-            case item.op
-            when :get
-                GetCommand.new(document, item.args[0])
-            when :set
-                SetCommand.new(document, item.args[0], item.args[1])
-            when :append
-                AppendCommand.new(document, item.args[0], item.args[1])
-            when :del
-                DelCommand.new(document, item.args[0], item.args[1])
-            end
+            CommandFactory.toDocumentCommand(store, item)
         elsif [:listdocs].include? item.op
             raise "NYI: #{item.op}"
         else
             raise "Unsupported workitem operation: #{item.op}"
+        end
+    end
+
+    private
+    def self.toDocumentCommand(store, item)
+        content = (store[item.docpath] or {})
+        document = Document.new(item.docpath, content)
+        case item.op
+        when :get
+            GetCommand.new(document, item.args[0])
+        when :set
+            SetCommand.new(document, item.args[0], item.args[1])
+        when :append
+            AppendCommand.new(document, item.args[0], item.args[1])
+        when :del
+            DelCommand.new(document, item.args[0], item.args[1])
         end
     end
 end
